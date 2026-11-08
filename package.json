@@ -1,0 +1,11 @@
+{
+  "name": "procut-studio",
+  "version": "1.0.0",
+  "description": "CapCut Mobile Style Single-File Web Video Editor by ashfak arya",
+  "author": "ashfak arya",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "license": "MIT"
+}

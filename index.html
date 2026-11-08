@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="author" content="ashfak arya" />
+<title>ProCut Studio — by ashfak arya</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; background: #333; border-radius: 2px; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #fff; border-radius: 50%; cursor: pointer; }
+  .tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 4px; min-width: 64px; color: #aaa; font-size: 11px; transition: color 0.15s; }
+  .tool-btn.active { color: #fff; }
+  .tool-btn .icon { font-size: 22px; }
+  .clip { position: absolute; top: 2px; bottom: 2px; border-radius: 4px; overflow: hidden; cursor: grab; transition: box-shadow 0.15s; }
+  .clip.selected { box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(255,255,255,0.3); z-index: 10; }
+  .clip:active { cursor: grabbing; }
+  .clip .handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; background: rgba(255,255,255,0.3); opacity: 0; transition: opacity 0.15s; }
+  .clip:hover .handle, .clip.selected .handle { opacity: 1; }
+  .clip .handle.left { left: 0; border-radius: 4px 0 0 4px; }
+  .clip .handle.right { right: 0; border-radius: 0 4px 4px 0; }
+  .panel { position: absolute; left: 0; right: 0; bottom: 0; background: #1a1a1a; border-top: 1px solid #2a2a2a; transform: translateY(100%); transition: transform 0.25s ease-out; z-index: 50; max-height: 60vh; overflow-y: auto; }
+  .panel.open { transform: translateY(0); }
+  .tab-btn { padding: 8px 14px; font-size: 13px; color: #888; white-space: nowrap; border-bottom: 2px solid transparent; }
+  .tab-btn.active { color: #fff; border-bottom-color: #fff; }
+  .slider-row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; }
+  .slider-row label { font-size: 12px; color: #aaa; min-width: 80px; }
+  .slider-row input[type=range] { flex: 1; }
+  .slider-row .val { font-size: 12px; color: #fff; min-width: 40px; text-align: right; }
+  .color-swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+  .color-swatch.selected { border-color: #fff; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; pointer-events: none; z-index: 20; }
+  .playhead::before { content: ''; position: absolute; top: -2px; left: -5px; width: 12px; height: 12px; background: #fff; clip-path: polygon(50% 100%, 0 0, 100% 0); }
+  .ruler-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid #333; font-size: 9px; color: #666; padding-left: 3px; }
+  .sticker-item { font-size: 36px; padding: 8px; cursor: pointer; text-align: center; border-radius: 8px; transition: background 0.15s; }
+  .sticker-item:hover, .sticker-item:active { background: #2a2a2a; }
+  .filter-item { width: 72px; flex-shrink: 0; cursor: pointer; text-align: center; }
+  .filter-item .preview { width: 72px; height: 72px; border-radius: 8px; background: linear-gradient(135deg, #667eea, #764ba2); margin-bottom: 4px; border: 2px solid transparent; }
+  .filter-item.selected .preview { border-color: #fff; }
+  .filter-item .name { font-size: 11px; color: #aaa; }
+  .filter-item.selected .name { color: #fff; }
+  .template-card { aspect-ratio: 16/9; background: #222; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .template-card:hover, .template-card.selected { border-color: #fff; }
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 1000; animation: slideDown 0.3s ease-out; }
+  @keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .preview-canvas { background: #000; display: block; }
+  .btn-primary { background: #fff; color: #000; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .btn-secondary { background: #2a2a2a; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; }
+  .btn-danger { background: #ef4444; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; }
+  select, input[type=text], input[type=number], textarea { background: #2a2a2a; color: #fff; border: 1px solid #3a3a3a; border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; width: 100%; }
+  select:focus, input:focus, textarea:focus { border-color: #fff; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #1a1a1a; border-radius: 12px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
+  .modal-header { padding: 16px; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 16px; border-top: 1px solid #2a2a2a; display: flex; gap: 8px; justify-content: flex-end; }
+  .keyframe-dot { position: absolute; top: 50%; width: 10px; height: 10px; background: #fbbf24; transform: translate(-50%, -50%) rotate(45deg); cursor: pointer; z-index: 5; }
+  @media (min-width: 768px) {
+    .desktop-layout { display: grid; grid-template-columns: 280px 1fr 300px; grid-template-rows: 1fr 280px; height: 100vh; }
+    .desktop-layout .top-bar { grid-column: 1 / -1; }
+    .desktop-layout .media-panel { grid-row: 2; overflow-y: auto; }
+    .desktop-layout .preview-area { grid-column: 2; grid-row: 2; }
+    .desktop-layout .props-panel { grid-column: 3; grid-row: 2 / 4; overflow-y: auto; }
+    .desktop-layout .timeline-area { grid-column: 2; grid-row: 3; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ============================================================
+// ProCut Studio - Single File Video Editor
+// Developer: ashfak arya
+// ============================================================
+
+// ---------- STATE ----------
+const state = {
+  view: 'home',
+  project: null,
+  activeTool: null,
+  selectedClipId: null,
+  isPlaying: false,
+  playhead: 0,
+  zoom: 50,
+  dragState: null,
+  history: [],
+  historyIndex: -1,
+  assetElements: new Map(),
+  audioElements: new Map(),
+  renderVersion: 0,
+  toast: null,
+  modal: null,
+};
+
+// ---------- UTILS ----------
+const uid = () => Math.random().toString(36).slice(2, 11);
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const formatTime = (s) => {
+  if (s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  const ms = Math.floor((s - Math.floor(s)) * 100);
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(2,'0')}`;
+};
+
+function toast(msg) {
+  state.toast = msg;
+  render();
+  setTimeout(() => { state.toast = null; render(); }, 2000);
+}
+
+// ---------- PROJECT MODEL ----------
+function createProject(name = 'Untitled') {
+  return {
+    id: uid(),
+    name,
+    developer: 'ashfak arya',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    assets: [],
+    tracks: [
+      { id: uid(), type: 'text', name: 'Text', order: 0, locked: false, hidden: false, muted: false },
+      { id: uid(), type: 'video', name: 'Video 1', order: 1, locked: false, hidden: false, muted: false },
+      { id: uid(), type: 'video', name: 'Video 2', order: 2, locked: false, hidden: false, muted: false },
+      { id: uid(), type: 'audio', name: 'Audio', order: 3, locked: false, hidden: false, muted: false },
+    ],
+    clips: [],
+    playhead: 0,
+  };
+}
+
+function createClip(overrides = {}) {
+  return {
+    id: uid(),
+    assetId: null,
+    trackId: '',
+    type: 'video',
+    start: 0,
+    inPoint: 0,
+    outPoint: 5,
+    x: 0, y: 0, scale: 1, rotation: 0, opacity: 1,
+    volume: 1,
+    speed: 1,
+    reversed: false,
+    muted: false,
+    filters: { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0, temp: 0 },
+    text: '', fontSize: 64, fontFamily: 'sans-serif', color: '#ffffff', bgColor: '', textAlign: 'center',
+    sticker: '',
+    crop: { l: 0, r: 0, t: 0, b: 0 },
+    keyframes: {},
+    blendMode: 'normal',
+    ...overrides,
+  };
+}
+
+// ---------- PERSISTENCE ----------
+function saveProject() {
+  if (!state.project) return;
+  const data = JSON.parse(JSON.stringify(state.project));
+  data.assets = data.assets.map(a => ({ ...a, url: '', thumbnail: '' }));
+  localStorage.setItem('procuts_projects', JSON.stringify(getAllProjects().filter(p => p.id !== data.id).concat(data)));
+  toast('Project saved ✓');
+}
+
+function getAllProjects() {
+  try { return JSON.parse(localStorage.getItem('procuts_projects') || '[]'); }
+  catch { return []; }
+}
+
+function loadProject(id) {
+  const all = getAllProjects();
+  const p = all.find(x => x.id === id);
+  if (p) {
+    state.project = p;
+    state.view = 'editor';
+    state.playhead = 0;
+    state.selectedClipId = null;
+    state.activeTool = null;
+    pushHistory();
+    render();
+  }
+}
+
+function deleteProject(id) {
+  const all = getAllProjects().filter(p => p.id !== id);
+  localStorage.setItem('procuts_projects', JSON.stringify(all));
+  render();
+}
+
+// ---------- HISTORY (Undo/Redo) ----------
+function pushHistory() {
+  if (!state.project) return;
+  state.history = state.history.slice(0, state.historyIndex + 1);
+  state.history.push(JSON.stringify(state.project));
+  if (state.history.length > 50) state.history.shift();
+  state.historyIndex = state.history.length - 1;
+}
+
+function undo() {
+  if (state.historyIndex <= 0) return;
+  state.historyIndex--;
+  state.project = JSON.parse(state.history[state.historyIndex]);
+  state.renderVersion++;
+  render();
+  toast('Undo');
+}
+
+function redo() {
+  if (state.historyIndex >= state.history.length - 1) return;
+  state.historyIndex++;
+  state.project = JSON.parse(state.history[state.historyIndex]);
+  state.renderVersion++;
+  render();
+  toast('Redo');
+}
+
+// ---------- UPDATE PROJECT ----------
+function updateProject(mutator) {
+  if (!state.project) return;
+  mutator(state.project);
+  state.project.updatedAt = Date.now();
+  state.renderVersion++;
+  pushHistory();
+  render();
+}
+
+// ---------- ASSET MANAGEMENT ----------
+async function importFiles(files) {
+  if (!state.project) return;
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const type = file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : file.type.includes('gif') ? 'gif' : 'image';
+    const asset = {
+      id: uid(), type, name: file.name, url, duration: 0, width: 0, height: 0, thumbnail: '', size: file.size, mime: file.type,
+    };
+    if (type === 'video' || type === 'audio') {
+      const el = document.createElement(type === 'video' ? 'video' : 'audio');
+      el.preload = 'metadata'; el.muted = true; el.src = url;
+      await new Promise(r => { el.onloadedmetadata = r; el.onerror = r; });
+      asset.duration = el.duration || 5;
+      if (type === 'video') {
+        asset.width = el.videoWidth; asset.height = el.videoHeight;
+        try {
+          el.currentTime = Math.min(1, asset.duration / 4);
+          await new Promise(r => { el.onseeked = r; setTimeout(r, 500); });
+          const c = document.createElement('canvas');
+          c.width = 160; c.height = 160 * (asset.height / asset.width);
+          c.getContext('2d').drawImage(el, 0, 0, c.width, c.height);
+          asset.thumbnail = c.toDataURL('image/jpeg', 0.7);
+        } catch {}
+      }
+    } else {
+      const img = new Image(); img.src = url;
+      await new Promise(r => { img.onload = r; img.onerror = r; });
+      asset.width = img.width; asset.height = img.height;
+      asset.duration = 5;
+      const c = document.createElement('canvas');
+      c.width = 160; c.height = 160 * (asset.height / asset.width);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      asset.thumbnail = c.toDataURL('image/jpeg', 0.7);
+    }
+    state.project.assets.push(asset);
+  }
+  state.renderVersion++;
+  render();
+  toast(`${files.length} file(s) imported`);
+}
+
+function addClipFromAsset(assetId) {
+  const asset = state.project.assets.find(a => a.id === assetId);
+  if (!asset) return;
+  const trackType = asset.type === 'audio' ? 'audio' : 'video';
+  const track = state.project.tracks.find(t => t.type === trackType && !t.locked);
+  if (!track) { toast('No available track'); return; }
+  const end = state.project.clips.filter(c => c.trackId === track.id).reduce((m, c) => Math.max(m, c.start + clipDuration(c)), 0);
+  const clip = createClip({
+    assetId, trackId: track.id, type: asset.type === 'audio' ? 'audio' : asset.type === 'image' ? 'image' : 'video',
+    start: Math.max(state.playhead, end), inPoint: 0, outPoint: asset.duration,
+  });
+  updateProject(p => p.clips.push(clip));
+  state.selectedClipId = clip.id;
+  render();
+}
+
+function clipDuration(c) { return (c.outPoint - c.inPoint) / Math.abs(c.speed || 1); }
+function clipEnd(c) { return c.start + clipDuration(c); }
+
+// ---------- CLIP OPERATIONS ----------
+function splitAllAtPlayhead() {
+  const time = state.playhead;
+  const toSplit = state.project.clips.filter(c => time > c.start && time < clipEnd(c));
+  if (toSplit.length === 0) { toast('Nothing to split'); return; }
+  updateProject(p => {
+    toSplit.forEach(c => {
+      const splitSrc = c.inPoint + (time - c.start) * Math.abs(c.speed);
+      const newClip = JSON.parse(JSON.stringify(c));
+      newClip.id = uid();
+      newClip.inPoint = splitSrc;
+      newClip.start = time;
+      c.outPoint = splitSrc;
+      p.clips.push(newClip);
+    });
+  });
+  toast(`Split ${toSplit.length} clip(s)`);
+}
+
+function deleteSelected() {
+  if (!state.selectedClipId) return;
+  updateProject(p => { p.clips = p.clips.filter(c => c.id !== state.selectedClipId); });
+  state.selectedClipId = null;
+  render();
+  toast('Deleted');
+}
+
+function duplicateSelected() {
+  const c = state.project.clips.find(x => x.id === state.selectedClipId);
+  if (!c) return;
+  const copy = JSON.parse(JSON.stringify(c));
+  copy.id = uid();
+  copy.start = clipEnd(c);
+  updateProject(p => p.clips.push(copy));
+  state.selectedClipId = copy.id;
+  render();
+  toast('Duplicated');
+}
+
+// ---------- CANVAS PREVIEW ----------
+function getAssetElement(asset) {
+  if (state.assetElements.has(asset.id)) return state.assetElements.get(asset.id);
+  let el;
+  if (asset.type === 'video') {
+    el = document.createElement('video');
+    el.src = asset.url; el.muted = true; el.playsInline = true; el.preload = 'auto';
+    el.crossOrigin = 'anonymous';
+  } else {
+    el = new Image(); el.src = asset.url;
+  }
+  state.assetElements.set(asset.id, el);
+  return el;
+}
+
+function applyFilterString(f) {
+  const parts = [];
+  if (f.brightness !== 100) parts.push(`brightness(${f.brightness}%)`);
+  if (f.contrast !== 100) parts.push(`contrast(${f.contrast}%)`);
+  if (f.saturation !== 100) parts.push(`saturate(${f.saturation}%)`);
+  if (f.hue) parts.push(`hue-rotate(${f.hue}deg)`);
+  if (f.blur > 0) parts.push(`blur(${f.blur}px)`);
+  return parts.length ? parts.join(' ') : 'none';
+}
+
+function evaluateKeyframes(kfs, fallback, time) {
+  if (!kfs || kfs.length === 0) return fallback;
+  const sorted = [...kfs].sort((a, b) => a.time - b.time);
+  if (time <= sorted[0].time) return sorted[0].value;
+  if (time >= sorted[sorted.length - 1].time) return sorted[sorted.length - 1].value;
+  let i = 0;
+  while (i < sorted.length - 1 && sorted[i + 1].time < time) i++;
+  const a = sorted[i], b = sorted[i + 1];
+  const t = (time - a.time) / (b.time - a.time);
+  return a.value + (b.value - a.value) * t;
+}
+
+function renderPreview(canvas, includeWatermark = false) {
+  if (!state.project) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const p = state.project;
+  const time = state.playhead;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  const tracksSorted = [...p.tracks].sort((a, b) => a.order - b.order);
+  const trackIdx = new Map(tracksSorted.map((t, i) => [t.id, i]));
+
+  const visibleClips = p.clips.filter(c => {
+    const end = clipEnd(c);
+    return time >= c.start && time < end;
+  }).sort((a, b) => (trackIdx.get(a.trackId) || 0) - (trackIdx.get(b.trackId) || 0));
+
+  for (const clip of visibleClips) {
+    const track = p.tracks.find(t => t.id === clip.trackId);
+    if (track?.hidden) continue;
+
+    ctx.save();
+
+    const x = evaluateKeyframes(clip.keyframes?.x, clip.x, time);
+    const y = evaluateKeyframes(clip.keyframes?.y, clip.y, time);
+    const scale = evaluateKeyframes(clip.keyframes?.scale, clip.scale, time);
+    const rotation = evaluateKeyframes(clip.keyframes?.rotation, clip.rotation, time);
+    const opacity = evaluateKeyframes(clip.keyframes?.opacity, clip.opacity, time);
+    ctx.globalAlpha = opacity;
+
+    const cx = W / 2 + x;
+    const cy = H / 2 + y;
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.scale(scale, scale);
+    ctx.translate(-W / 2, -H / 2);
+
+    if (clip.type === 'text') {
+      drawTextClip(ctx, clip, W, H);
+    } else if (clip.type === 'sticker') {
+      ctx.font = `${clip.fontSize || 120}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(clip.sticker || '😀', W / 2, H / 2);
+    } else if (clip.assetId) {
+      const asset = p.assets.find(a => a.id === clip.assetId);
+      if (asset) {
+        const el = getAssetElement(asset);
+        if (el) {
+          ctx.filter = applyFilterString(clip.filters);
+          const srcW = asset.width || (el.videoWidth || el.width || W);
+          const srcH = asset.height || (el.videoHeight || el.height || H);
+
+          if (el.tagName === 'VIDEO') {
+            const localTime = time - clip.start;
+            const srcTime = clip.inPoint + localTime * clip.speed;
+            try {
+              if (Math.abs(el.currentTime - srcTime) > 0.1) {
+                el.currentTime = clamp(srcTime, 0, el.duration || 0);
+              }
+            } catch {}
+          }
+
+          const canvasAspect = W / H;
+          const srcAspect = srcW / srcH;
+          let dw, dh, dx, dy;
+          if (srcAspect > canvasAspect) {
+            dh = H; dw = H * srcAspect;
+          } else {
+            dw = W; dh = W / srcAspect;
+          }
+          dx = (W - dw) / 2;
+          dy = (H - dh) / 2;
+
+          const cr = clip.crop;
+          const sx = (cr?.l || 0) * srcW;
+          const sy = (cr?.t || 0) * srcH;
+          const sw = srcW * (1 - (cr?.l || 0) - (cr?.r || 0));
+          const sh = srcH * (1 - (cr?.t || 0) - (cr?.b || 0));
+
+          try {
+            ctx.drawImage(el, sx, sy, sw, sh, dx, dy, dw, dh);
+          } catch {}
+          ctx.filter = 'none';
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // Developer credit watermark on exported video
+  if (includeWatermark) {
+    ctx.save();
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Created with ProCut Studio • Dev: ashfak arya', W - 24, H - 24);
+    ctx.restore();
+  }
+}
+
+function drawTextClip(ctx, clip, W, H) {
+  const text = clip.text || '';
+  if (!text) return;
+  const fontSize = clip.fontSize || 64;
+  ctx.font = `bold ${fontSize}px ${clip.fontFamily || 'sans-serif'}`;
+  ctx.textAlign = clip.textAlign || 'center';
+  ctx.textBaseline = 'middle';
+
+  const x = clip.textAlign === 'left' ? 40 : clip.textAlign === 'right' ? W - 40 : W / 2;
+  const y = H / 2 + (clip.y || 0);
+
+  if (clip.bgColor) {
+    const metrics = ctx.measureText(text);
+    const pad = 20;
+    const w = metrics.width + pad * 2;
+    const h = fontSize + pad * 2;
+    ctx.fillStyle = clip.bgColor;
+    const bx = clip.textAlign === 'left' ? 20 : clip.textAlign === 'right' ? W - 20 - w : W / 2 - w / 2;
+    ctx.fillRect(bx, y - h / 2, w, h);
+  }
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+  ctx.lineWidth = Math.max(2, fontSize / 20);
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = clip.color || '#fff';
+  ctx.fillText(text, x, y);
+}
+
+// ---------- AUDIO ENGINE ----------
+let audioCtx = null;
+let audioSources = new Map();
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function stopAllAudio() {
+  audioSources.forEach(s => {
+    try { s.element.pause(); s.source.disconnect(); s.gain.disconnect(); } catch {}
+  });
+  audioSources.clear();
+}
+
+async function playAudioFrom(time) {
+  if (!state.project) return;
+  initAudio();
+  stopAllAudio();
+  const master = audioCtx.createGain();
+  master.connect(audioCtx.destination);
+
+  const clips = state.project.clips.filter(c =>
+    (c.type === 'audio' || (c.type === 'video' && !c.muted)) && clipEnd(c) > time
+  );
+
+  for (const clip of clips) {
+    const asset = state.project.assets.find(a => a.id === clip.assetId);
+    if (!asset || asset.type === 'image') continue;
+    let el = state.audioElements.get(asset.id);
+    if (!el) {
+      el = new Audio();
+      el.src = asset.url;
+      el.crossOrigin = 'anonymous';
+      state.audioElements.set(asset.id, el);
+    }
+    const localTime = time - clip.start;
+    const srcTime = clip.inPoint + Math.max(0, localTime) * clip.speed;
+    el.currentTime = clamp(srcTime, 0, el.duration || 0);
+    el.playbackRate = clip.speed;
+    el.volume = clip.volume;
+    el.muted = clip.muted;
+    try {
+      const source = audioCtx.createMediaElementSource(el);
+      const gain = audioCtx.createGain();
+      gain.gain.value = 1;
+      source.connect(gain).connect(master);
+      audioSources.set(clip.id, { source, gain, element: el });
+      await el.play().catch(() => {});
+      const remaining = clipEnd(clip) - time;
+      setTimeout(() => { try { el.pause(); } catch {} }, remaining * 1000);
+    } catch (e) { console.warn(e); }
+  }
+}
+
+// ---------- EXPORT ----------
+async function exportVideo() {
+  if (!state.project) return;
+  const p = state.project;
+  const duration = Math.max(1, p.clips.reduce((m, c) => Math.max(m, clipEnd(c)), 0));
+  if (duration < 0.1) { toast('Nothing to export'); return; }
+
+  toast('Starting export...');
+
+  const canvas = document.createElement('canvas');
+  canvas.width = p.width;
+  canvas.height = p.height;
+
+  const stream = canvas.captureStream(p.fps);
+
+  const audioCtxExport = new AudioContext();
+  const dest = audioCtxExport.createMediaStreamDestination();
+  const audioClips = p.clips.filter(c => c.type === 'audio' || (c.type === 'video' && !c.muted));
+  const audioEls = [];
+  for (const clip of audioClips) {
+    const asset = p.assets.find(a => a.id === clip.assetId);
+    if (!asset || asset.type === 'image') continue;
+    const el = new Audio();
+    el.src = asset.url;
+    el.currentTime = clip.inPoint;
+    el.volume = clip.volume;
+    el.muted = clip.muted;
+    audioEls.push(el);
+    try {
+      const src = audioCtxExport.createMediaElementSource(el);
+      src.connect(dest);
+    } catch {}
+  }
+  dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+
+  const recorder = new MediaRecorder(stream, {
+    mimeType: 'video/webm;codecs=vp9,opus',
+    videoBitsPerSecond: 8_000_000,
+  });
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  const donePromise = new Promise(r => { recorder.onstop = () => r(new Blob(chunks, { type: 'video/webm' })); });
+
+  recorder.start();
+
+  for (const el of audioEls) {
+    el.currentTime = 0;
+    await el.play().catch(() => {});
+  }
+
+  const fps = p.fps;
+  const totalFrames = Math.ceil(duration * fps);
+  const startMs = performance.now();
+
+  for (let frame = 0; frame < totalFrames; frame++) {
+    const t = frame / fps;
+    state.playhead = t;
+    renderPreview(canvas, true);
+    if (frame % 10 === 0) toast(`Rendering ${Math.round(t / duration * 100)}%`);
+    const targetMs = startMs + (frame + 1) * (1000 / fps);
+    const wait = targetMs - performance.now();
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  }
+
+  audioEls.forEach(el => el.pause());
+  audioCtxExport.close();
+  recorder.stop();
+  stream.getTracks().forEach(t => t.stop());
+
+  const blob = await donePromise;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${p.name.replace(/[^a-z0-9]/gi, '_')}_ashfak_arya.webm`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export complete ✓');
+}
+
+// ---------- STICKERS ----------
+const STICKERS = ['😀','😂','😍','🥰','😎','🤩','😭','😡','🤔','👍','👎','❤️','💔','💯','🔥','⭐','✨','💥','💫','🎉','🎊','🎁','🎈','🎵','🎶','🎬','🎥','📸','📹','🎤','🎧','🎮','🏆','🥇','👑','💎','💰','🚀','⚡','☀️','🌙','⭐','🌈','☁️','🌸','🌺','🌻','🌹','🍕','🍔','🍟','🍩','🍪','🎂','🍰','🍫','🍿','🥤','☕','🍺','🍷'];
+
+// ---------- FILTERS ----------
+const FILTER_PRESETS = [
+  { name: 'None', f: { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0, temp: 0 } },
+  { name: 'Vivid', f: { brightness: 110, contrast: 115, saturation: 130, hue: 0, blur: 0, temp: 0 } },
+  { name: 'Warm', f: { brightness: 105, contrast: 105, saturation: 110, hue: 10, blur: 0, temp: 20 } },
+  { name: 'Cool', f: { brightness: 100, contrast: 105, saturation: 95, hue: -10, blur: 0, temp: -20 } },
+  { name: 'Vintage', f: { brightness: 95, contrast: 90, saturation: 70, hue: 15, blur: 0, temp: 10 } },
+  { name: 'B&W', f: { brightness: 100, contrast: 110, saturation: 0, hue: 0, blur: 0, temp: 0 } },
+  { name: 'Dream', f: { brightness: 110, contrast: 95, saturation: 110, hue: 0, blur: 2, temp: 0 } },
+  { name: 'Cinema', f: { brightness: 95, contrast: 120, saturation: 85, hue: -5, blur: 0, temp: -5 } },
+  { name: 'Fade', f: { brightness: 105, contrast: 85, saturation: 90, hue: 0, blur: 0, temp: 0 } },
+  { name: 'Sharp', f: { brightness: 100, contrast: 140, saturation: 110, hue: 0, blur: 0, temp: 0 } },
+];
+
+// ---------- EFFECTS ----------
+const EFFECT_PRESETS = [
+  { name: 'Glitch', apply: (c) => { c.filters.hue = (c.filters.hue + 30) % 360; c.filters.contrast = 130; } },
+  { name: 'VHS', apply: (c) => { c.filters.saturation = 70; c.filters.brightness = 95; c.filters.hue = 5; } },
+  { name: 'Blur', apply: (c) => { c.filters.blur = 5; } },
+  { name: 'Sepia', apply: (c) => { c.filters.saturation = 50; c.filters.hue = 25; c.filters.brightness = 95; } },
+  { name: 'Invert', apply: (c) => { c.filters.brightness = 100; c.filters.contrast = -100; } },
+];
+
+// ---------- TEMPLATES ----------
+const TEMPLATES = [
+  { name: 'TikTok / Reels', w: 1080, h: 1920, icon: '📱' },
+  { name: 'YouTube', w: 1920, h: 1080, icon: '📺' },
+  { name: 'Instagram Post', w: 1080, h: 1080, icon: '⬜' },
+  { name: 'YouTube Shorts', w: 1080, h: 1920, icon: '▶️' },
+  { name: 'Facebook', w: 1200, h: 630, icon: '👥' },
+  { name: 'Twitter', w: 1280, h: 720, icon: '🐦' },
+  { name: '4K Cinema', w: 3840, h: 2160, icon: '🎬' },
+  { name: 'Story', w: 1080, h: 1920, icon: '📖' },
+];
+
+// ---------- RENDER ----------
+function render() {
+  const app = document.getElementById('app');
+  if (state.view === 'home') {
+    app.innerHTML = renderHome();
+    attachHomeEvents();
+  } else {
+    app.innerHTML = renderEditor();
+    attachEditorEvents();
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('preview-canvas');
+      if (canvas) renderPreview(canvas, false);
+    });
+  }
+  if (state.toast) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = state.toast;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+  }
+  if (state.modal) {
+    const m = document.createElement('div');
+    m.className = 'modal-overlay';
+    m.innerHTML = renderModal();
+    document.body.appendChild(m);
+    attachModalEvents();
+  }
+}
+
+function renderHome() {
+  const projects = getAllProjects();
+  return `
+    <div class="min-h-screen bg-black text-white overflow-y-auto pb-10">
+      <header class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center font-bold">P</div>
+          <div>
+            <div class="font-bold text-base">ProCut Studio</div>
+            <div class="text-[10px] text-neutral-400">Developer: ashfak arya</div>
+          </div>
+        </div>
+        <span class="text-[11px] bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-pink-400 font-medium">by ashfak arya</span>
+      </header>
+
+      <main class="px-4 py-6 max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-1">ProCut Studio</h1>
+        <p class="text-sm text-neutral-400 mb-6">Create, edit and export videos like a pro — Developed by <strong class="text-white">ashfak arya</strong></p>
+
+        <button id="btn-new-project" class="w-full py-4 bg-white text-black rounded-xl font-semibold text-base mb-6 flex items-center justify-center gap-2">
+          <span class="text-xl">+</span> New Project
+        </button>
+
+        <h2 class="text-sm font-semibold mb-3 text-neutral-300">Templates</h2>
+        <div class="grid grid-cols-2 gap-3 mb-8">
+          ${TEMPLATES.map((t, i) => `
+            <button data-template="${i}" class="template-card">
+              <div class="text-center">
+                <div class="text-3xl mb-1">${t.icon}</div>
+                <div class="text-xs font-medium">${t.name}</div>
+                <div class="text-[10px] text-neutral-500">${t.w}×${t.h}</div>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+
+        <h2 class="text-sm font-semibold mb-3 text-neutral-300">Recent Projects</h2>
+        ${projects.length === 0 ? `
+          <div class="text-center text-neutral-500 text-sm py-10 border border-dashed border-neutral-800 rounded-xl">
+            No projects yet. Create your first one!
+          </div>
+        ` : `
+          <div class="space-y-2">
+            ${projects.map(p => `
+              <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-3 flex items-center gap-3">
+                <div class="w-14 h-14 bg-neutral-800 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">🎬</div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium truncate">${p.name}</div>
+                  <div class="text-xs text-neutral-500">${p.width}×${p.height} • ${new Date(p.updatedAt).toLocaleDateString()}</div>
+                </div>
+                <button data-open="${p.id}" class="btn-primary text-xs">Open</button>
+                <button data-delete="${p.id}" class="text-neutral-500 hover:text-red-400 px-2">🗑</button>
+              </div>
+            `).join('')}
+          </div>
+        `}
+
+        <footer class="mt-10 pt-4 border-t border-neutral-900 text-center text-xs text-neutral-500">
+          ProCut Studio • Designed & Developed by <span class="text-neutral-300 font-semibold">ashfak arya</span>
+        </footer>
+      </main>
+    </div>
+  `;
+}
+
+function attachHomeEvents() {
+  document.getElementById('btn-new-project')?.addEventListener('click', () => {
+    state.project = createProject('Untitled Project');
+    state.view = 'editor';
+    state.playhead = 0;
+    state.selectedClipId = null;
+    pushHistory();
+    render();
+  });
+  document.querySelectorAll('[data-template]').forEach(el => {
+    el.addEventListener('click', () => {
+      const t = TEMPLATES[parseInt(el.dataset.template)];
+      state.project = createProject(t.name);
+      state.project.width = t.w;
+      state.project.height = t.h;
+      state.view = 'editor';
+      pushHistory();
+      render();
+    });
+  });
+  document.querySelectorAll('[data-open]').forEach(el => {
+    el.addEventListener('click', () => loadProject(el.dataset.open));
+  });
+  document.querySelectorAll('[data-delete]').forEach(el => {
+    el.addEventListener('click', () => {
+      if (confirm('Delete this project?')) deleteProject(el.dataset.delete);
+    });
+  });
+}
+
+// ---------- EDITOR RENDER ----------
+function renderEditor() {
+  const p = state.project;
+  if (!p) return '';
+  const selectedClip = state.selectedClipId ? p.clips.find(c => c.id === state.selectedClipId) : null;
+  const duration = Math.max(10, p.clips.reduce((m, c) => Math.max(m, clipEnd(c)), 5));
+  const totalWidth = duration * state.zoom;
+
+  return `
+    <div class="h-screen flex flex-col bg-black text-white">
+      <!-- Top Bar -->
+      <div class="h-12 bg-neutral-950 border-b border-neutral-800 flex items-center px-3 gap-2 flex-shrink-0">
+        <button id="btn-back" class="text-xl">←</button>
+        <input id="project-name" value="${p.name}" class="flex-1 bg-transparent outline-none text-sm font-medium text-center" />
+        <button id="btn-undo" class="p-2 hover:bg-neutral-800 rounded" title="Undo">↶</button>
+        <button id="btn-redo" class="p-2 hover:bg-neutral-800 rounded" title="Redo">↷</button>
+        <button id="btn-save" class="p-2 hover:bg-neutral-800 rounded" title="Save">💾</button>
+        <button id="btn-export" class="btn-primary text-xs">Export</button>
+      </div>
+
+      <!-- Preview -->
+      <div class="flex-1 flex items-center justify-center bg-black relative min-h-0 overflow-hidden" id="preview-container">
+        <canvas id="preview-canvas" class="preview-canvas max-w-full max-h-full" style="aspect-ratio: ${p.width}/${p.height};"></canvas>
+        <div class="absolute bottom-2 right-2 bg-black/60 px-2 py-0.5 rounded text-[10px] text-neutral-400">
+          Dev: ashfak arya
+        </div>
+        ${selectedClip ? `
+          <div class="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-xs">
+            Selected: ${selectedClip.type === 'text' ? 'Text' : selectedClip.type === 'sticker' ? 'Sticker' : (p.assets.find(a => a.id === selectedClip.assetId)?.name || selectedClip.type)}
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Playback Controls -->
+      <div class="bg-neutral-950 border-y border-neutral-800 px-3 py-2 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <button id="btn-play" class="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center text-lg">
+            ${state.isPlaying ? '⏸' : '▶'}
+          </button>
+          <button id="btn-split" class="p-2 hover:bg-neutral-800 rounded text-sm" title="Split at playhead">✂️</button>
+          <button id="btn-delete" class="p-2 hover:bg-neutral-800 rounded text-sm" title="Delete selected">🗑</button>
+          <button id="btn-duplicate" class="p-2 hover:bg-neutral-800 rounded text-sm" title="Duplicate">📋</button>
+        </div>
+        <div class="font-mono text-xs text-neutral-300">
+          ${formatTime(state.playhead)} / ${formatTime(duration)}
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="bg-neutral-950 flex-shrink-0" style="height: 180px;">
+        <div class="flex h-full">
+          <!-- Track headers -->
+          <div class="w-16 flex-shrink-0 border-r border-neutral-800 overflow-y-auto">
+            <div class="h-6 border-b border-neutral-800 text-[9px] text-neutral-500 flex items-center justify-center">TIME</div>
+            ${p.tracks.sort((a, b) => a.order - b.order).map(t => `
+              <div class="border-b border-neutral-800 flex items-center justify-center text-[10px] text-neutral-400" style="height: 44px;">
+                ${t.type === 'video' ? '🎥' : t.type === 'audio' ? '🔊' : t.type === 'text' ? '📝' : '✨'}
+              </div>
+            `).join('')}
+          </div>
+          <!-- Timeline content -->
+          <div class="flex-1 overflow-x-auto overflow-y-hidden relative" id="timeline-scroll">
+            <div style="width: ${totalWidth}px; position: relative; height: 100%;">
+              <!-- Ruler -->
+              <div class="h-6 border-b border-neutral-800 relative" id="ruler">
+                ${Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => `
+                  <div class="ruler-tick" style="left: ${i * state.zoom}px;">${i}s</div>
+                `).join('')}
+                <div class="playhead" id="playhead" style="left: ${state.playhead * state.zoom}px;"></div>
+              </div>
+              <!-- Tracks -->
+              ${p.tracks.sort((a, b) => a.order - b.order).map(t => `
+                <div class="border-b border-neutral-800 relative" style="height: 44px;" data-track="${t.id}">
+                  <div class="playhead" style="left: ${state.playhead * state.zoom}px;"></div>
+                  ${p.clips.filter(c => c.trackId === t.id).map(c => {
+                    const dur = clipDuration(c);
+                    const isSelected = c.id === state.selectedClipId;
+                    const asset = p.assets.find(a => a.id === c.assetId);
+                    const bg = c.type === 'text' ? 'bg-amber-600' : c.type === 'sticker' ? 'bg-pink-600' : c.type === 'audio' ? 'bg-emerald-600' : 'bg-indigo-600';
+                    const label = c.type === 'text' ? (c.text || 'Text') : c.type === 'sticker' ? c.sticker : (asset?.name || c.type);
+                    return `
+                      <div class="clip ${bg} ${isSelected ? 'selected' : ''}" data-clip="${c.id}" style="left: ${c.start * state.zoom}px; width: ${Math.max(20, dur * state.zoom)}px;">
+                        <div class="handle left" data-handle="left"></div>
+                        <div class="handle right" data-handle="right"></div>
+                        <div class="px-2 py-1 text-[10px] text-white truncate pointer-events-none flex items-center gap-1 h-full">
+                          ${c.muted ? '🔇' : ''}${c.speed !== 1 ? `${c.speed}x` : ''} ${label}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tool Bar -->
+      <div class="bg-neutral-950 border-t border-neutral-800 flex-shrink-0">
+        <div class="flex overflow-x-auto scrollbar-hide">
+          ${[
+            { id: 'edit', icon: '✂️', label: 'Edit' },
+            { id: 'audio', icon: '🎵', label: 'Audio' },
+            { id: 'text', icon: '📝', label: 'Text' },
+            { id: 'stickers', icon: '😀', label: 'Stickers' },
+            { id: 'filters', icon: '🎨', label: 'Filters' },
+            { id: 'effects', icon: '✨', label: 'Effects' },
+            { id: 'transitions', icon: '🔄', label: 'Trans' },
+            { id: 'speed', icon: '⚡', label: 'Speed' },
+            { id: 'crop', icon: '⬜', label: 'Crop' },
+            { id: 'keyframes', icon: '◆', label: 'Key' },
+            { id: 'color', icon: '🌈', label: 'Color' },
+          ].map(t => `
+            <button class="tool-btn ${state.activeTool === t.id ? 'active' : ''}" data-tool="${t.id}">
+              <span class="icon">${t.icon}</span>
+              <span>${t.label}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Action Panel -->
+      <div class="panel ${state.activeTool ? 'open' : ''}" id="action-panel">
+        ${renderActionPanel()}
+      </div>
+    </div>
+  `;
+}
+
+function renderActionPanel() {
+  const p = state.project;
+  const clip = state.selectedClipId ? p.clips.find(c => c.id === state.selectedClipId) : null;
+
+  switch (state.activeTool) {
+    case 'edit': return renderEditPanel(clip);
+    case 'audio': return renderAudioPanel(clip);
+    case 'text': return renderTextPanel(clip);
+    case 'stickers': return renderStickersPanel(clip);
+    case 'filters': return renderFiltersPanel(clip);
+    case 'effects': return renderEffectsPanel(clip);
+    case 'transitions': return renderTransitionsPanel(clip);
+    case 'speed': return renderSpeedPanel(clip);
+    case 'crop': return renderCropPanel(clip);
+    case 'keyframes': return renderKeyframesPanel(clip);
+    case 'color': return renderColorPanel(clip);
+    default: return '';
+  }
+}
+
+function renderEditPanel(clip) {
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Edit</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="grid grid-cols-4 gap-2 mb-4">
+        <button id="btn-import-media" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">📥</div>
+          <div class="text-[10px]">Import</div>
+        </button>
+        <button id="btn-split-playhead" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">✂️</div>
+          <div class="text-[10px]">Split</div>
+        </button>
+        <button id="btn-dup-clip" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">📋</div>
+          <div class="text-[10px]">Duplicate</div>
+        </button>
+        <button id="btn-del-clip" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">🗑</div>
+          <div class="text-[10px]">Delete</div>
+        </button>
+        <button id="btn-reverse" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">⏪</div>
+          <div class="text-[10px]">Reverse</div>
+        </button>
+        <button id="btn-mute" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">${clip?.muted ? '🔊' : '🔇'}</div>
+          <div class="text-[10px]">${clip?.muted ? 'Unmute' : 'Mute'}</div>
+        </button>
+        <button id="btn-freeze" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">🧊</div>
+          <div class="text-[10px]">Freeze</div>
+        </button>
+        <button id="btn-flip" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+          <div class="text-2xl mb-1">↔️</div>
+          <div class="text-[10px]">Flip</div>
+        </button>
+      </div>
+
+      <div class="text-xs text-neutral-400 mb-2">Media Library</div>
+      <div class="grid grid-cols-3 gap-2">
+        ${state.project.assets.map(a => `
+          <div class="bg-neutral-800 rounded overflow-hidden cursor-pointer" data-add-asset="${a.id}">
+            <div class="aspect-video bg-black flex items-center justify-center relative">
+              ${a.thumbnail ? `<img src="${a.thumbnail}" class="w-full h-full object-cover" />` : `<div class="text-2xl opacity-40">${a.type === 'video' ? '🎥' : a.type === 'audio' ? '🔊' : '🖼'}</div>`}
+              <div class="absolute bottom-0 right-0 bg-black/70 text-[9px] px-1">${a.duration.toFixed(1)}s</div>
+            </div>
+            <div class="text-[9px] p-1 truncate">${a.name}</div>
+          </div>
+        `).join('') || '<div class="col-span-3 text-center text-neutral-500 text-xs py-4">No media yet. Tap Import.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderAudioPanel(clip) {
+  if (!clip || (clip.type !== 'audio' && clip.type !== 'video')) {
+    return `<div class="p-4 text-center text-neutral-400 text-sm">Select an audio or video clip</div>`;
+  }
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Audio</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="slider-row">
+        <label>Volume</label>
+        <input type="range" min="0" max="2" step="0.01" value="${clip.volume}" data-prop="volume" />
+        <div class="val">${Math.round(clip.volume * 100)}%</div>
+      </div>
+      <div class="flex gap-2 p-3">
+        <button data-toggle-mute class="flex-1 btn-secondary text-xs">${clip.muted ? '🔊 Unmute' : '🔇 Mute'}</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTextPanel(clip) {
+  const c = clip && clip.type === 'text' ? clip : null;
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Text</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <button id="btn-add-text" class="w-full btn-primary mb-3">+ Add Text Clip</button>
+      ${c ? `
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-neutral-400 block mb-1">Text</label>
+            <textarea data-text-prop="text" rows="2" class="resize-none">${c.text || ''}</textarea>
+          </div>
+          <div class="slider-row">
+            <label>Size</label>
+            <input type="range" min="12" max="200" value="${c.fontSize}" data-text-prop="fontSize" />
+            <div class="val">${c.fontSize}</div>
+          </div>
+          <div>
+            <label class="text-xs text-neutral-400 block mb-1">Font</label>
+            <select data-text-prop="fontFamily">
+              <option value="sans-serif" ${c.fontFamily === 'sans-serif' ? 'selected' : ''}>Sans Serif</option>
+              <option value="serif" ${c.fontFamily === 'serif' ? 'selected' : ''}>Serif</option>
+              <option value="monospace" ${c.fontFamily === 'monospace' ? 'selected' : ''}>Monospace</option>
+              <option value="Impact" ${c.fontFamily === 'Impact' ? 'selected' : ''}>Impact</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-neutral-400 block mb-1">Text Color</label>
+            <div class="flex gap-2 flex-wrap">
+              ${['#ffffff','#000000','#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899'].map(col => `
+                <div class="color-swatch ${c.color === col ? 'selected' : ''}" style="background:${col}" data-text-color="${col}"></div>
+              `).join('')}
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-neutral-400 block mb-1">Background</label>
+            <div class="flex gap-2 flex-wrap">
+              <div class="color-swatch ${!c.bgColor ? 'selected' : ''}" style="background:transparent; border:1px dashed #666" data-text-bg=""></div>
+              ${['#000000','#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6'].map(col => `
+                <div class="color-swatch ${c.bgColor === col ? 'selected' : ''}" style="background:${col}" data-text-bg="${col}"></div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      ` : '<div class="text-center text-neutral-500 text-xs py-4">Add text or select a text clip</div>'}
+    </div>
+  `;
+}
+
+function renderStickersPanel() {
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Stickers</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="grid grid-cols-6 gap-1">
+        ${STICKERS.map(s => `<div class="sticker-item" data-sticker="${s}">${s}</div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderFiltersPanel(clip) {
+  if (!clip || clip.type === 'audio' || clip.type === 'text') {
+    return `<div class="p-4 text-center text-neutral-400 text-sm">Select a video/image clip</div>`;
+  }
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Filters</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="flex gap-3 overflow-x-auto pb-2">
+        ${FILTER_PRESETS.map((f, i) => `
+          <div class="filter-item" data-filter="${i}">
+            <div class="preview" style="filter: ${applyFilterString(f.f)}"></div>
+            <div class="name">${f.name}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="mt-4 space-y-1">
+        <div class="slider-row"><label>Brightness</label><input type="range" min="0" max="200" value="${clip.filters.brightness}" data-filter-prop="brightness" /><div class="val">${clip.filters.brightness}</div></div>
+        <div class="slider-row"><label>Contrast</label><input type="range" min="0" max="200" value="${clip.filters.contrast}" data-filter-prop="contrast" /><div class="val">${clip.filters.contrast}</div></div>
+        <div class="slider-row"><label>Saturation</label><input type="range" min="0" max="200" value="${clip.filters.saturation}" data-filter-prop="saturation" /><div class="val">${clip.filters.saturation}</div></div>
+        <div class="slider-row"><label>Hue</label><input type="range" min="-180" max="180" value="${clip.filters.hue}" data-filter-prop="hue" /><div class="val">${clip.filters.hue}°</div></div>
+        <div class="slider-row"><label>Blur</label><input type="range" min="0" max="20" value="${clip.filters.blur}" data-filter-prop="blur" /><div class="val">${clip.filters.blur}px</div></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEffectsPanel(clip) {
+  if (!clip || clip.type === 'audio' || clip.type === 'text') {
+    return `<div class="p-4 text-center text-neutral-400 text-sm">Select a video/image clip</div>`;
+  }
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Effects</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        ${EFFECT_PRESETS.map((e, i) => `
+          <button data-effect="${i}" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+            <div class="text-2xl mb-1">✨</div>
+            <div class="text-xs">${e.name}</div>
+          </button>
+        `).join('')}
+      </div>
+      <div class="mt-4">
+        <div class="slider-row">
+          <label>Opacity</label>
+          <input type="range" min="0" max="1" step="0.01" value="${clip.opacity}" data-clip-prop="opacity" />
+          <div class="val">${Math.round(clip.opacity * 100)}%</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTransitionsPanel() {
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Transitions</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        ${['Fade','Dissolve','Slide Left','Slide Right','Zoom In','Zoom Out','Wipe','Flash'].map(t => `
+          <button data-transition="${t}" class="bg-neutral-800 hover:bg-neutral-700 rounded-lg p-3 text-center">
+            <div class="text-xl mb-1">🔄</div>
+            <div class="text-xs">${t}</div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSpeedPanel(clip) {
+  if (!clip) return `<div class="p-4 text-center text-neutral-400 text-sm">Select a clip</div>`;
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Speed</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="slider-row">
+        <label>Speed</label>
+        <input type="range" min="0.1" max="4" step="0.1" value="${clip.speed}" data-clip-prop="speed" />
+        <div class="val">${clip.speed}x</div>
+      </div>
+      <div class="grid grid-cols-4 gap-2 mt-3 px-2">
+        ${[0.25, 0.5, 1, 1.5, 2, 3, 4].map(s => `
+          <button data-speed="${s}" class="py-2 rounded text-xs ${clip.speed === s ? 'bg-white text-black' : 'bg-neutral-800'}">${s}x</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderCropPanel(clip) {
+  if (!clip || clip.type === 'audio' || clip.type === 'text') {
+    return `<div class="p-4 text-center text-neutral-400 text-sm">Select a video/image clip</div>`;
+  }
+  const cr = clip.crop || { l: 0, r: 0, t: 0, b: 0 };
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Crop & Transform</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="slider-row"><label>Crop Left</label><input type="range" min="0" max="0.5" step="0.01" value="${cr.l}" data-crop="l" /><div class="val">${Math.round(cr.l * 100)}%</div></div>
+      <div class="slider-row"><label>Crop Right</label><input type="range" min="0" max="0.5" step="0.01" value="${cr.r}" data-crop="r" /><div class="val">${Math.round(cr.r * 100)}%</div></div>
+      <div class="slider-row"><label>Crop Top</label><input type="range" min="0" max="0.5" step="0.01" value="${cr.t}" data-crop="t" /><div class="val">${Math.round(cr.t * 100)}%</div></div>
+      <div class="slider-row"><label>Crop Bottom</label><input type="range" min="0" max="0.5" step="0.01" value="${cr.b}" data-crop="b" /><div class="val">${Math.round(cr.b * 100)}%</div></div>
+      <div class="mt-3 space-y-1">
+        <div class="slider-row"><label>Position X</label><input type="range" min="-500" max="500" value="${clip.x}" data-clip-prop="x" /><div class="val">${clip.x}</div></div>
+        <div class="slider-row"><label>Position Y</label><input type="range" min="-500" max="500" value="${clip.y}" data-clip-prop="y" /><div class="val">${clip.y}</div></div>
+        <div class="slider-row"><label>Scale</label><input type="range" min="0.1" max="3" step="0.01" value="${clip.scale}" data-clip-prop="scale" /><div class="val">${clip.scale}x</div></div>
+        <div class="slider-row"><label>Rotation</label><input type="range" min="-180" max="180" value="${clip.rotation}" data-clip-prop="rotation" /><div class="val">${clip.rotation}°</div></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mt-3 px-2">
+        <button data-rotate="-90" class="py-2 bg-neutral-800 rounded text-xs">↺ -90°</button>
+        <button data-rotate="0" class="py-2 bg-neutral-800 rounded text-xs">Reset</button>
+        <button data-rotate="90" class="py-2 bg-neutral-800 rounded text-xs">↻ +90°</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderKeyframesPanel(clip) {
+  if (!clip) return `<div class="p-4 text-center text-neutral-400 text-sm">Select a clip</div>`;
+  const props = ['x','y','scale','rotation','opacity'];
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Keyframes</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="space-y-2">
+        ${props.map(prop => {
+          const kfs = clip.keyframes?.[prop] || [];
+          const current = kfs.find(k => Math.abs(k.time - state.playhead) < 0.05);
+          const value = clip[prop];
+          return `
+            <div class="bg-neutral-800 rounded-lg p-3">
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-xs font-medium capitalize">${prop}</div>
+                <button data-kf-toggle="${prop}" class="w-6 h-6 rounded flex items-center justify-center text-xs ${current ? 'bg-amber-500 text-black' : 'bg-neutral-700'}">◆</button>
+              </div>
+              <div class="slider-row" style="padding: 0;">
+                <input type="range" min="${prop === 'opacity' ? 0 : prop === 'scale' ? 0.1 : prop === 'rotation' ? -180 : -500}" max="${prop === 'opacity' ? 1 : prop === 'scale' ? 3 : prop === 'rotation' ? 180 : 500}" step="${prop === 'opacity' || prop === 'scale' ? 0.01 : 1}" value="${value}" data-clip-prop="${prop}" />
+                <div class="val">${value}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderColorPanel(clip) {
+  if (!clip || clip.type === 'audio' || clip.type === 'text') {
+    return `<div class="p-4 text-center text-neutral-400 text-sm">Select a video/image clip</div>`;
+  }
+  return `
+    <div class="p-3">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-semibold text-sm">Color Grading</div>
+        <button data-close-panel class="text-neutral-400 text-xl">×</button>
+      </div>
+      <div class="space-y-1">
+        <div class="slider-row"><label>Temperature</label><input type="range" min="-100" max="100" value="${clip.filters.temp}" data-filter-prop="temp" /><div class="val">${clip.filters.temp}</div></div>
+        <div class="slider-row"><label>Brightness</label><input type="range" min="0" max="200" value="${clip.filters.brightness}" data-filter-prop="brightness" /><div class="val">${clip.filters.brightness}</div></div>
+        <div class="slider-row"><label>Contrast</label><input type="range" min="0" max="200" value="${clip.filters.contrast}" data-filter-prop="contrast" /><div class="val">${clip.filters.contrast}</div></div>
+        <div class="slider-row"><label>Saturation</label><input type="range" min="0" max="200" value="${clip.filters.saturation}" data-filter-prop="saturation" /><div class="val">${clip.filters.saturation}</div></div>
+        <div class="slider-row"><label>Hue</label><input type="range" min="-180" max="180" value="${clip.filters.hue}" data-filter-prop="hue" /><div class="val">${clip.filters.hue}°</div></div>
+      </div>
+      <button data-reset-filters class="w-full mt-3 btn-secondary text-sm">Reset All</button>
+    </div>
+  `;
+}
+
+function renderModal() {
+  if (!state.modal) return '';
+  return `
+    <div class="modal">
+      <div class="modal-header">
+        <div class="font-semibold">${state.modal.title}</div>
+        <button data-close-modal class="text-xl text-neutral-400">×</button>
+      </div>
+      <div class="modal-body">${state.modal.body}</div>
+      ${state.modal.footer ? `<div class="modal-footer">${state.modal.footer}</div>` : ''}
+    </div>
+  `;
+}
+
+// ---------- EVENT ATTACHMENT ----------
+function attachEditorEvents() {
+  document.getElementById('btn-back')?.addEventListener('click', () => {
+    saveProject();
+    state.view = 'home';
+    state.project = null;
+    render();
+  });
+  document.getElementById('project-name')?.addEventListener('change', (e) => {
+    updateProject(p => p.name = e.target.value);
+  });
+  document.getElementById('btn-undo')?.addEventListener('click', undo);
+  document.getElementById('btn-redo')?.addEventListener('click', redo);
+  document.getElementById('btn-save')?.addEventListener('click', saveProject);
+  document.getElementById('btn-export')?.addEventListener('click', () => {
+    state.modal = {
+      title: 'Export Video',
+      body: `
+        <div class="space-y-3">
+          <div class="text-sm text-neutral-300">Your video will be exported as a WebM file with developer credits (<strong class="text-white">ashfak arya</strong>).</div>
+          <div class="bg-neutral-800 rounded p-3 text-xs space-y-1">
+            <div><strong>Resolution:</strong> ${state.project.width}×${state.project.height}</div>
+            <div><strong>FPS:</strong> ${state.project.fps}</div>
+            <div><strong>Duration:</strong> ${formatTime(Math.max(1, state.project.clips.reduce((m, c) => Math.max(m, clipEnd(c)), 0)))}</div>
+            <div><strong>Developer:</strong> ashfak arya</div>
+          </div>
+        </div>
+      `,
+      footer: `<button data-close-modal class="btn-secondary">Cancel</button><button id="btn-confirm-export" class="btn-primary">Export</button>`,
+    };
+    render();
+  });
+
+  document.getElementById('btn-play')?.addEventListener('click', togglePlay);
+  document.getElementById('btn-split')?.addEventListener('click', splitAllAtPlayhead);
+  document.getElementById('btn-delete')?.addEventListener('click', deleteSelected);
+  document.getElementById('btn-duplicate')?.addEventListener('click', duplicateSelected);
+
+  document.querySelectorAll('[data-tool]').forEach(el => {
+    el.addEventListener('click', () => {
+      const tool = el.dataset.tool;
+      state.activeTool = state.activeTool === tool ? null : tool;
+      render();
+    });
+  });
+
+  attachTimelineEvents();
+  attachPanelEvents();
+}
+
+function attachTimelineEvents() {
+  const ruler = document.getElementById('ruler');
+  const scroll = document.getElementById('timeline-scroll');
+
+  if (ruler) {
+    const seek = (e) => {
+      const rect = ruler.getBoundingClientRect();
+      const scrollLeft = scroll.scrollLeft;
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left + scrollLeft;
+      state.playhead = clamp(x / state.zoom, 0, 1000);
+      render();
+    };
+    ruler.addEventListener('mousedown', seek);
+    ruler.addEventListener('touchstart', seek);
+  }
+
+  document.querySelectorAll('[data-clip]').forEach(el => {
+    const clipId = el.dataset.clip;
+    el.addEventListener('click', (e) => {
+      if (e.target.dataset.handle) return;
+      state.selectedClipId = clipId;
+      render();
+    });
+
+    let dragStart = null;
+    const startDrag = (e) => {
+      if (e.target.dataset.handle) return;
+      e.preventDefault();
+      const clip = state.project.clips.find(c => c.id === clipId);
+      if (!clip) return;
+      dragStart = {
+        clipId,
+        startX: e.touches ? e.touches[0].clientX : e.clientX,
+        originalStart: clip.start,
+      };
+      state.selectedClipId = clipId;
+    };
+
+    const onDrag = (e) => {
+      if (!dragStart) return;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const dt = (x - dragStart.startX) / state.zoom;
+      const clip = state.project.clips.find(c => c.id === dragStart.clipId);
+      if (clip) {
+        clip.start = clamp(dragStart.originalStart + dt, 0, 1000);
+        render();
+      }
+    };
+
+    const endDrag = () => {
+      if (dragStart) { pushHistory(); dragStart = null; }
+    };
+
+    el.addEventListener('mousedown', startDrag);
+    el.addEventListener('touchstart', startDrag);
+    window.addEventListener('mousemove', onDrag);
+    window.addEventListener('touchmove', onDrag);
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+  });
+}
+
+function attachPanelEvents() {
+  document.querySelectorAll('[data-close-panel]').forEach(el => {
+    el.addEventListener('click', () => { state.activeTool = null; render(); });
+  });
+  document.querySelectorAll('[data-close-modal]').forEach(el => {
+    el.addEventListener('click', () => { state.modal = null; render(); });
+  });
+
+  document.getElementById('btn-import-media')?.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*,image/*,audio/*,.gif';
+    input.multiple = true;
+    input.onchange = (e) => importFiles(e.target.files);
+    input.click();
+  });
+  document.getElementById('btn-split-playhead')?.addEventListener('click', splitAllAtPlayhead);
+  document.getElementById('btn-dup-clip')?.addEventListener('click', duplicateSelected);
+  document.getElementById('btn-del-clip')?.addEventListener('click', deleteSelected);
+  document.getElementById('btn-mute')?.addEventListener('click', () => {
+    const c = state.project.clips.find(x => x.id === state.selectedClipId);
+    if (!c) return;
+    updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.muted = !cl.muted; });
+  });
+  document.getElementById('btn-flip')?.addEventListener('click', () => {
+    const c = state.project.clips.find(x => x.id === state.selectedClipId);
+    if (!c) return;
+    updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.scale = -cl.scale; });
+  });
+
+  document.querySelectorAll('[data-add-asset]').forEach(el => {
+    el.addEventListener('click', () => addClipFromAsset(el.dataset.addAsset));
+  });
+
+  document.querySelectorAll('[data-prop]').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      c[el.dataset.prop] = parseFloat(e.target.value);
+      render();
+    });
+    el.addEventListener('change', () => pushHistory());
+  });
+  document.querySelector('[data-toggle-mute]')?.addEventListener('click', () => {
+    const c = state.project.clips.find(x => x.id === state.selectedClipId);
+    if (!c) return;
+    updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.muted = !cl.muted; });
+  });
+
+  document.getElementById('btn-add-text')?.addEventListener('click', () => {
+    const track = state.project.tracks.find(t => t.type === 'text');
+    if (!track) return;
+    const end = state.project.clips.filter(c => c.trackId === track.id).reduce((m, c) => Math.max(m, clipEnd(c)), 0);
+    const clip = createClip({
+      trackId: track.id, type: 'text',
+      start: Math.max(state.playhead, end), inPoint: 0, outPoint: 5,
+      text: 'Your text here', fontSize: 64, color: '#ffffff',
+    });
+    updateProject(p => p.clips.push(clip));
+    state.selectedClipId = clip.id;
+    render();
+  });
+  document.querySelectorAll('[data-text-prop]').forEach(el => {
+    const prop = el.dataset.textProp;
+    el.addEventListener('input', (e) => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c || c.type !== 'text') return;
+      c[prop] = el.type === 'range' || el.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+      render();
+    });
+    el.addEventListener('change', () => pushHistory());
+  });
+  document.querySelectorAll('[data-text-color]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.color = el.dataset.textColor; });
+    });
+  });
+  document.querySelectorAll('[data-text-bg]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.bgColor = el.dataset.textBg; });
+    });
+  });
+
+  document.querySelectorAll('[data-sticker]').forEach(el => {
+    el.addEventListener('click', () => {
+      const track = state.project.tracks.find(t => t.type === 'text');
+      if (!track) return;
+      const end = state.project.clips.filter(c => c.trackId === track.id).reduce((m, c) => Math.max(m, clipEnd(c)), 0);
+      const clip = createClip({
+        trackId: track.id, type: 'sticker',
+        start: Math.max(state.playhead, end), inPoint: 0, outPoint: 3,
+        sticker: el.dataset.sticker, fontSize: 120,
+      });
+      updateProject(p => p.clips.push(clip));
+      state.selectedClipId = clip.id;
+      toast('Sticker added');
+    });
+  });
+
+  document.querySelectorAll('[data-filter]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      const preset = FILTER_PRESETS[parseInt(el.dataset.filter)];
+      updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.filters = { ...preset.f }; });
+    });
+  });
+  document.querySelectorAll('[data-filter-prop]').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      c.filters[el.dataset.filterProp] = parseFloat(e.target.value);
+      render();
+    });
+    el.addEventListener('change', () => pushHistory());
+  });
+
+  document.querySelectorAll('[data-effect]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      const preset = EFFECT_PRESETS[parseInt(el.dataset.effect)];
+      updateProject(p => {
+        const cl = p.clips.find(x => x.id === c.id);
+        if (cl) preset.apply(cl);
+      });
+      toast(`${preset.name} applied`);
+    });
+  });
+  document.querySelectorAll('[data-clip-prop]').forEach(el => {
+    const prop = el.dataset.clipProp;
+    el.addEventListener('input', (e) => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      c[prop] = el.type === 'range' || el.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+      render();
+    });
+    el.addEventListener('change', () => pushHistory());
+  });
+
+  document.querySelectorAll('[data-speed]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.speed = parseFloat(el.dataset.speed); });
+    });
+  });
+
+  document.querySelectorAll('[data-crop]').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      c.crop = c.crop || { l: 0, r: 0, t: 0, b: 0 };
+      c.crop[el.dataset.crop] = parseFloat(e.target.value);
+      render();
+    });
+    el.addEventListener('change', () => pushHistory());
+  });
+  document.querySelectorAll('[data-rotate]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      const deg = parseInt(el.dataset.rotate);
+      updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.rotation = deg === 0 ? 0 : cl.rotation + deg; });
+    });
+  });
+
+  document.querySelectorAll('[data-kf-toggle]').forEach(el => {
+    el.addEventListener('click', () => {
+      const c = state.project.clips.find(x => x.id === state.selectedClipId);
+      if (!c) return;
+      const prop = el.dataset.kfToggle;
+      c.keyframes = c.keyframes || {};
+      c.keyframes[prop] = c.keyframes[prop] || [];
+      const existing = c.keyframes[prop].findIndex(k => Math.abs(k.time - state.playhead) < 0.05);
+      if (existing >= 0) {
+        c.keyframes[prop].splice(existing, 1);
+        toast('Keyframe removed');
+      } else {
+        c.keyframes[prop].push({ time: state.playhead, value: c[prop] });
+        toast('Keyframe added');
+      }
+      pushHistory();
+      render();
+    });
+  });
+
+  document.querySelector('[data-reset-filters]')?.addEventListener('click', () => {
+    const c = state.project.clips.find(x => x.id === state.selectedClipId);
+    if (!c) return;
+    updateProject(p => { const cl = p.clips.find(x => x.id === c.id); if (cl) cl.filters = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0, temp: 0 }; });
+    toast('Filters reset');
+  });
+
+  document.getElementById('btn-confirm-export')?.addEventListener('click', () => {
+    state.modal = null;
+    render();
+    exportVideo();
+  });
+}
+
+function attachModalEvents() {
+  document.querySelectorAll('[data-close-modal]').forEach(el => {
+    el.addEventListener('click', () => { state.modal = null; render(); });
+  });
+  document.getElementById('btn-confirm-export')?.addEventListener('click', () => {
+    state.modal = null;
+    render();
+    exportVideo();
+  });
+}
+
+// ---------- PLAYBACK ----------
+let playRaf = null;
+let lastPlayTime = 0;
+
+function togglePlay() {
+  state.isPlaying = !state.isPlaying;
+  if (state.isPlaying) {
+    initAudio();
+    playAudioFrom(state.playhead);
+    lastPlayTime = performance.now();
+    const tick = () => {
+      if (!state.isPlaying) return;
+      const now = performance.now();
+      const dt = (now - lastPlayTime) / 1000;
+      lastPlayTime = now;
+      const duration = Math.max(1, state.project.clips.reduce((m, c) => Math.max(m, clipEnd(c)), 0));
+      state.playhead += dt;
+      if (state.playhead >= duration) {
+        state.playhead = 0;
+        state.isPlaying = false;
+        stopAllAudio();
+        render();
+        return;
+      }
+      const canvas = document.getElementById('preview-canvas');
+      if (canvas) renderPreview(canvas, false);
+      const timeEl = document.querySelector('.font-mono');
+      if (timeEl) timeEl.textContent = `${formatTime(state.playhead)} / ${formatTime(duration)}`;
+      document.querySelectorAll('.playhead').forEach(ph => {
+        ph.style.left = (state.playhead * state.zoom) + 'px';
+      });
+      playRaf = requestAnimationFrame(tick);
+    };
+    playRaf = requestAnimationFrame(tick);
+  } else {
+    cancelAnimationFrame(playRaf);
+    stopAllAudio();
+  }
+  render();
+}
+
+render();
+console.log('%c🎬 ProCut Studio Loaded — Developed by ashfak arya', 'color: #ec4899; font-size: 16px; font-weight: bold;');
+</script>
+</body>
+</html>
